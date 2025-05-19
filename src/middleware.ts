@@ -1,40 +1,28 @@
+// middleware.ts
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { User } from "@/models/User";
-import dbConnect from "@/lib/mongodb";
-import { clerkClient } from "@clerk/clerk-sdk-node";
 
-const isPublicRoute = createRouteMatcher(["/", "/api/webhook/clerk"]);
+// Define your public routes here
+const isPublicRoute = createRouteMatcher([
+  "/",                  // Public home page
+  "/about",             // Example additional public route
+  "/api/webhook/clerk", // Your Clerk webhook route
+]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Skip for public routes
+  // Allow access to public routes
   if (isPublicRoute(req)) return NextResponse.next();
 
-  const userId = (await auth()).userId;
-  // If user is authenticated
-  if (userId) {
-    try {
-      await dbConnect();
-
-      let user = await User.findOne({ clerkId: userId });
-
-      if (!user) {
-        const clerkUser = await clerkClient.users.getUser(userId); // ✅ Fix 2
-        const email = clerkUser.emailAddresses[0]?.emailAddress;
-
-        if (email) {
-          await User.create({
-            email,
-            clerkId: userId,
-            role: "user", // default
-          });
-        }
-      }
-    } catch (error) {
-      console.error("❌ Middleware error:", error);
-      return NextResponse.json({ error: "Internal Error" }, { status: 500 });
-    }
+  // All other routes require authentication
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
   return NextResponse.next();
 });
+
+// Optional: apply middleware to all routes
+export const config = {
+  matcher: ["/((?!_next|.*\\..*).*)"],
+};
