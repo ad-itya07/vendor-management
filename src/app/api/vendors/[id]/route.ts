@@ -7,8 +7,9 @@ import { User } from '@/models/User';
 // GET a specific vendor
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const id = (await params).id;
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -22,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const vendor = await Vendor.findById(params.id).populate('createdBy', 'email');
+    const vendor = await Vendor.findById(id).populate('createdBy', 'email');
     
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
@@ -44,8 +45,9 @@ export async function GET(
 // UPDATE a vendor
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const id = (await params).id;
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -59,7 +61,7 @@ export async function PUT(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const vendor = await Vendor.findById(params.id);
+    const vendor = await Vendor.findById(id);
     
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
@@ -85,7 +87,7 @@ export async function PUT(
       const existingVendor = await Vendor.findOne({ 
         name: body.name,
         createdBy: user._id,
-        _id: { $ne: params.id }
+        _id: { $ne: id }
       });
 
       if (existingVendor) {
@@ -98,7 +100,7 @@ export async function PUT(
 
     // Update vendor
     const updatedVendor = await Vendor.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true, runValidators: true }
     );
@@ -114,8 +116,9 @@ export async function PUT(
 // DELETE a vendor
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const id = (await params).id;
   try {
     const { userId } = await auth();
     if (!userId) {
@@ -129,7 +132,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const vendor = await Vendor.findById(params.id);
+    const vendor = await Vendor.findById(id);
     
     if (!vendor) {
       return NextResponse.json({ error: 'Vendor not found' }, { status: 404 });
@@ -140,7 +143,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await Vendor.findByIdAndDelete(params.id);
+    await Vendor.findByIdAndDelete(id);
 
     return NextResponse.json({ message: 'Vendor deleted successfully' });
 
